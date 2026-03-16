@@ -8,4 +8,5 @@ class Instance {
         int n_machines;
         vector<vector<int>> processing_times;
         void loadFile(string filename);
+        int evaluate(vector<int> sequence);
 };
