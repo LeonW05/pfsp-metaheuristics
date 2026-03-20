@@ -12,4 +12,5 @@ class Individual {
         void mutationSwap(Instance& instance);
         void mutationReverse(Instance& instance);
         Individual crossoverOX(Individual& p2, Instance& instance);
+        pair<Individual, Individual> crossoverPMX(Individual& p2, Instance& instance);
 };

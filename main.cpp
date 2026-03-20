@@ -1,4 +1,5 @@
 #include <iostream>
+#include <set>
 #include "instance.hpp"
 #include "individual.hpp"
 #include "population.hpp"
@@ -27,4 +28,19 @@ int main() {
     cout << "\nChild: ";
     for (int x : child.sequence) cout << x << " ";
     cout << "\nChild fitness: " << child.fitness << endl;
+
+    pair<Individual, Individual> children = p1.crossoverPMX(p2, instance);
+    cout << "\nChild 1: ";
+    for (int x : children.first.sequence) cout << x << " ";
+    cout << "\nChild 1 fitness: " << children.first.fitness << endl;
+    cout << "Child 2: ";
+    for (int x : children.second.sequence) cout << x << " ";
+    cout << "\nChild 2 fitness: " << children.second.fitness << endl;
+
+    set<int> check(children.first.sequence.begin(), children.first.sequence.end());
+    cout << "Child1 unique values: " << check.size() << endl;
+    set<int> check2(children.second.sequence.begin(), children.second.sequence.end());
+    cout << "Child2 unique values: " << check2.size() << endl;
+
+
 }
