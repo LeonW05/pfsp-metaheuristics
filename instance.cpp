@@ -40,7 +40,7 @@ int Instance::evaluate(vector<int> sequence) {
     aux.resize(n_machines, vector<int>(n_jobs));
 
     for (int m = 0; m < n_machines; m++) {
-        for (int j = 0; j < n_jobs; j++) {
+        for (int j = 0; j < sequence.size(); j++) {
             if (m == 0 && j == 0) {
                 aux[m][j] = processing_times[m][sequence[j]];
             }
@@ -59,7 +59,7 @@ int Instance::evaluate(vector<int> sequence) {
         }
     }
 
-    for (int j = 0; j < n_jobs; j++) {
+    for (int j = 0; j < sequence.size(); j++) {
         res += aux[n_machines-1][j];
     }
 

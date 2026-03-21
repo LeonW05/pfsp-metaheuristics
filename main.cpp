@@ -3,6 +3,7 @@
 #include "instance.hpp"
 #include "individual.hpp"
 #include "population.hpp"
+#include "greedy.hpp"
 using namespace std;
 
 
@@ -42,5 +43,9 @@ int main() {
     set<int> check2(children.second.sequence.begin(), children.second.sequence.end());
     cout << "Child2 unique values: " << check2.size() << endl;
 
+    Individual greedy_solution = GreedyAlg().greedy(instance);
+    cout << "\nGreedy solution: ";
+    for (int x : greedy_solution.sequence) cout << x << " ";
+    cout << "\nGreedy fitness: " << greedy_solution.fitness << endl;
 
 }
