@@ -6,6 +6,6 @@ using namespace std;
 class Population {
     public:
         vector<Individual> individuals;
-        Population(int population_size, int n_jobs, Instance& instance);
+        Population(int population_size, Instance& instance);
         Individual tournament(int N);
 };

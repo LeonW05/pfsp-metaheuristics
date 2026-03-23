@@ -1,5 +1,7 @@
 #include <iostream>
 #include <set>
+#include <climits>
+#include <cmath>
 #include "instance.hpp"
 #include "individual.hpp"
 #include "population.hpp"
@@ -7,45 +9,48 @@
 using namespace std;
 
 
+void randomAlg(Instance& instance, int N) {
+    int best = INT_MAX;
+    int worst = -1;
+    float avg = 0;
+    float std = 0;
+    vector<int> fitnesses;
+
+    for (int i = 0; i < N; i++) {
+        Individual p(instance.n_jobs, instance);
+        if (p.fitness < best) {
+            best = p.fitness;
+        }
+
+        if (p.fitness > worst) {
+            worst = p.fitness;
+        }
+        avg += p.fitness;
+        fitnesses.push_back(p.fitness);
+    }
+    avg /= N;
+
+    for (int i = 0; i < fitnesses.size(); i++) {
+        std += (fitnesses[i] - avg) * (fitnesses[i] - avg);
+    }
+    std = sqrt(std / N);
+
+    cout << "Best: " << best << " Worst: " << worst << " Avg: " << avg << " Std: " << std << endl;
+}
+
+void greedyAlg(Instance& instance) {
+    GreedyAlg g;
+    Individual p = g.greedy(instance);
+    cout << "Greedy fitness: " << p.fitness << endl;
+}
+
 int main() {
     Instance instance;
     string filename = getenv("HOME") + string("/PWR/Optimization Methods/pfsp-metaheuristics/instances/tai20_5_0.fsp");
     instance.loadFile(filename);
     
-    Individual p1(instance.n_jobs, instance);
-    Individual p2(instance.n_jobs, instance);
-    
-    cout << "P1: ";
-    for (int x : p1.sequence) cout << x << " ";
-    cout << "\nP2: ";
-    for (int x : p2.sequence) cout << x << " ";
-    cout << endl;
-    
-    cout << "P1 fitness: " << p1.fitness << endl;
-    cout << "P2 fitness: " << p2.fitness << endl;
+    randomAlg(instance, 10000);    
+    greedyAlg(instance);
 
-    Individual child = p1.crossoverOX(p2, instance);
-    
-    cout << "\nChild: ";
-    for (int x : child.sequence) cout << x << " ";
-    cout << "\nChild fitness: " << child.fitness << endl;
-
-    pair<Individual, Individual> children = p1.crossoverPMX(p2, instance);
-    cout << "\nChild 1: ";
-    for (int x : children.first.sequence) cout << x << " ";
-    cout << "\nChild 1 fitness: " << children.first.fitness << endl;
-    cout << "Child 2: ";
-    for (int x : children.second.sequence) cout << x << " ";
-    cout << "\nChild 2 fitness: " << children.second.fitness << endl;
-
-    set<int> check(children.first.sequence.begin(), children.first.sequence.end());
-    cout << "Child1 unique values: " << check.size() << endl;
-    set<int> check2(children.second.sequence.begin(), children.second.sequence.end());
-    cout << "Child2 unique values: " << check2.size() << endl;
-
-    Individual greedy_solution = GreedyAlg().greedy(instance);
-    cout << "\nGreedy solution: ";
-    for (int x : greedy_solution.sequence) cout << x << " ";
-    cout << "\nGreedy fitness: " << greedy_solution.fitness << endl;
-
+    return 0;
 }

@@ -3,9 +3,9 @@
 #include <random>
 using namespace std;
 
-Population::Population(int population_size, int n_jobs, Instance& instance) {
+Population::Population(int population_size, Instance& instance) {
     for (int i = 0; i < population_size; i++) {
-        individuals.push_back(Individual(n_jobs, instance));
+        individuals.push_back(Individual(instance.n_jobs, instance));
     }
 }
 
