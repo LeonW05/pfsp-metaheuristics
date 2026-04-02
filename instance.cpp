@@ -31,6 +31,8 @@ void Instance::loadFile(string filename) {
             processing_times[i][j] = buffer;
         }
     }
+
+    file.close();
 }
 
 int Instance::evaluate(vector<int> sequence) {

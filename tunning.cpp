@@ -1,46 +1,14 @@
 #include <iostream>
-#include <set>
 #include <climits>
 #include <cmath>
 #include <random>
 #include "instance.hpp"
 #include "individual.hpp"
 #include "population.hpp"
-#include "greedy.hpp"
 using namespace std;
 
 enum CrossoverType { OX, PMX };
 enum MutationType { SWAP, REVERSE };
-
-void randomAlg(Instance& instance, int N) {
-    int best = INT_MAX;
-    int worst = -1;
-    float avg = 0;
-    float std = 0;
-    vector<int> fitnesses;
-
-    for (int i = 0; i < N; i++) {
-        Individual p(instance.n_jobs, instance);
-        if (p.fitness < best) best = p.fitness;
-        if (p.fitness > worst) worst = p.fitness;
-        avg += p.fitness;
-        fitnesses.push_back(p.fitness);
-    }
-    avg /= N;
-
-    for (int i = 0; i < (int)fitnesses.size(); i++) {
-        std += (fitnesses[i] - avg) * (fitnesses[i] - avg);
-    }
-    std = sqrt(std / N);
-
-    cout << "Best: " << best << " Worst: " << worst << " Avg: " << avg << " Std: " << std << endl;
-}
-
-void greedyAlg(Instance& instance) {
-    GreedyAlg g;
-    Individual p = g.greedy(instance);
-    cout << "Greedy fitness: " << p.fitness << endl;
-}
 
 void evolvingAlg(Instance& instance, int pop_size, int gen, float px, float pm, int tournament_size, CrossoverType crossover_type = OX, MutationType mutation_type = SWAP) {
     random_device rd;
@@ -100,55 +68,7 @@ void evolvingAlg(Instance& instance, int pop_size, int gen, float px, float pm, 
     }
     std = sqrt(std / 10);
     
-    cout << "EA Best: " << best << " Worst: " << worst << " Avg: " << avg << " Std: " << std << endl;
-}
-
-void simulatedAnnealingAlg(Instance& instance, float T0, float alpha, float T_min) {
-    random_device rd;
-    mt19937 g(rd());
-    uniform_real_distribution<float> dis(0.0, 1.0);
-    
-    int best = INT_MAX;
-    int worst = -1;
-    float avg = 0;
-    float std = 0;
-    vector<int> fitnesses;
-    
-    for (int run = 0; run < 10; run++) {
-        Individual current(instance.n_jobs, instance);
-        Individual best_run = current;
-        float T = T0;
-        
-        while (T > T_min) {
-            Individual neighbor = current;
-            neighbor.mutationSwap(instance);
-            if (neighbor.fitness < current.fitness) {
-                current = neighbor;
-                if (current.fitness < best_run.fitness) {
-                    best_run = current;
-                }
-            } else {
-                float acceptance_prob = exp((current.fitness - neighbor.fitness) / T);
-                if (dis(g) < acceptance_prob) {
-                    current = neighbor;
-                }
-            }
-            T *= alpha;
-        }
-        
-        if (best_run.fitness < best) best = best_run.fitness;
-        if (best_run.fitness > worst) worst = best_run.fitness;
-        avg += best_run.fitness;
-        fitnesses.push_back(best_run.fitness);
-    }
-    
-    avg /= 10;
-    for (int i = 0; i < (int)fitnesses.size(); i++) {
-        std += (fitnesses[i] - avg) * (fitnesses[i] - avg);
-    }
-    std = sqrt(std / 10);
-    
-    cout << "SA Best: " << best << " Worst: " << worst << " Avg: " << avg << " Std: " << std << endl;
+    cout << "Best: " << best << " Worst: " << worst << " Avg: " << avg << " Std: " << std << endl;
 }
 
 void tuningEA(Instance& instance) {
@@ -188,26 +108,8 @@ void tuningEA(Instance& instance) {
 }
 
 int main() {
-    vector<string> instances = {
-        "./instances/tai20_5_0.fsp",
-        "./instances/tai20_10_0.fsp",
-        "./instances/tai20_20_0.fsp",
-        "./instances/tai100_10_0.fsp",
-        "./instances/tai100_20_0.fsp",
-        "./instances/tai500_20_0.fsp"
-    };
-
-    for (int i = 0; i < (int)instances.size(); i++) {
-        Instance instance;
-        instance.loadFile(instances[i]);
-        cout << "Instance " << i + 1 << " (" << instances[i] << "):" << endl;
-        
-        randomAlg(instance, 10000);
-        greedyAlg(instance);
-        evolvingAlg(instance, 100, 100, 0.5, 0.2, 5);
-        simulatedAnnealingAlg(instance, 1000, 0.999, 0.01);
-        cout << "------------------------------------------------------" << endl;
-    }
-
+    Instance instance;
+    instance.loadFile("./instances/tai20_5_0.fsp");
+    tuningEA(instance);
     return 0;
 }
