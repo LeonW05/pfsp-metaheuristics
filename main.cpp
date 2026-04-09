@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <set>
 #include <climits>
 #include <cmath>
@@ -12,7 +13,14 @@ using namespace std;
 enum CrossoverType { OX, PMX };
 enum MutationType { SWAP, REVERSE };
 
-void randomAlg(Instance& instance, int N) {
+struct Results {
+    int best;
+    int worst;
+    float avg;
+    float std;
+};
+
+Results randomAlg(Instance& instance, int N) {
     int best = INT_MAX;
     int worst = -1;
     float avg = 0;
@@ -34,15 +42,17 @@ void randomAlg(Instance& instance, int N) {
     std = sqrt(std / N);
 
     cout << "Best: " << best << " Worst: " << worst << " Avg: " << avg << " Std: " << std << endl;
+    return {best, worst, avg, std};
 }
 
-void greedyAlg(Instance& instance) {
+int greedyAlg(Instance& instance) {
     GreedyAlg g;
     Individual p = g.greedy(instance);
     cout << "Greedy fitness: " << p.fitness << endl;
+    return p.fitness;
 }
 
-void evolvingAlg(Instance& instance, int pop_size, int gen, float px, float pm, int tournament_size, CrossoverType crossover_type = OX, MutationType mutation_type = SWAP) {
+Results evolvingAlg(Instance& instance, int pop_size, int gen, float px, float pm, int tournament_size, ofstream& convergence_csv, string instance_name, CrossoverType crossover_type = OX, MutationType mutation_type = SWAP) {
     random_device rd;
     mt19937 g(rd());
     uniform_real_distribution<float> dis(0.0, 1.0);
@@ -86,6 +96,8 @@ void evolvingAlg(Instance& instance, int pop_size, int gen, float px, float pm, 
                 new_population.push_back(offspring);
             }
             pop.individuals = new_population;
+            
+            convergence_csv << run << "," << i << "," << best_run.fitness << ",EA," << instance_name << endl;
         }
         
         if (best_run.fitness < best) best = best_run.fitness;
@@ -101,9 +113,10 @@ void evolvingAlg(Instance& instance, int pop_size, int gen, float px, float pm, 
     std = sqrt(std / 10);
     
     cout << "EA Best: " << best << " Worst: " << worst << " Avg: " << avg << " Std: " << std << endl;
+    return {best, worst, avg, std};
 }
 
-void simulatedAnnealingAlg(Instance& instance, float T0, float alpha, float T_min) {
+Results simulatedAnnealingAlg(Instance& instance, float T0, float alpha, float T_min) {
     random_device rd;
     mt19937 g(rd());
     uniform_real_distribution<float> dis(0.0, 1.0);
@@ -149,42 +162,7 @@ void simulatedAnnealingAlg(Instance& instance, float T0, float alpha, float T_mi
     std = sqrt(std / 10);
     
     cout << "SA Best: " << best << " Worst: " << worst << " Avg: " << avg << " Std: " << std << endl;
-}
-
-void tuningEA(Instance& instance) {
-    cout << "\n--- Tuning Population Size ---" << endl;
-    vector<int> pop_sizes = {50, 100, 200};
-    for (int pop_size : pop_sizes) {
-        int gen = 10000 / pop_size;
-        cout << "pop_size=" << pop_size << " gen=" << gen << ": ";
-        evolvingAlg(instance, pop_size, gen, 0.7, 0.1, 5);
-    }
-
-    cout << "\n--- Tuning Crossover Probability ---" << endl;
-    vector<float> px_values = {0.5, 0.7, 0.9};
-    for (float px : px_values) {
-        cout << "px=" << px << ": ";
-        evolvingAlg(instance, 100, 100, px, 0.1, 5);
-    }
-
-    cout << "\n--- Tuning Mutation Probability ---" << endl;
-    vector<float> pm_values = {0.05, 0.1, 0.2};
-    for (float pm : pm_values) {
-        cout << "pm=" << pm << ": ";
-        evolvingAlg(instance, 100, 100, 0.7, pm, 5);
-    }
-
-    cout << "\n--- Tuning Crossover Type ---" << endl;
-    cout << "OX: ";
-    evolvingAlg(instance, 100, 100, 0.7, 0.1, 5, OX);
-    cout << "PMX: ";
-    evolvingAlg(instance, 100, 100, 0.7, 0.1, 5, PMX);
-
-    cout << "\n--- Tuning Mutation Type ---" << endl;
-    cout << "Swap: ";
-    evolvingAlg(instance, 100, 100, 0.7, 0.1, 5, OX, SWAP);
-    cout << "Reverse: ";
-    evolvingAlg(instance, 100, 100, 0.7, 0.1, 5, OX, REVERSE);
+    return {best, worst, avg, std};
 }
 
 int main() {
@@ -197,17 +175,36 @@ int main() {
         "./instances/tai500_20_0.fsp"
     };
 
+    ofstream csv("./results/results.csv");
+    csv << "algorithm,instance,best,worst,avg,std" << endl;
+
+    ofstream convergence_csv("./results/convergence.csv");
+    convergence_csv << "run,generation,best_fitness,algorithm,instance" << endl;
+
     for (int i = 0; i < (int)instances.size(); i++) {
         Instance instance;
         instance.loadFile(instances[i]);
+        string instance_name = instances[i].substr(instances[i].find_last_of("/") + 1);
         cout << "Instance " << i + 1 << " (" << instances[i] << "):" << endl;
         
-        randomAlg(instance, 10000);
-        greedyAlg(instance);
-        evolvingAlg(instance, 100, 100, 0.5, 0.2, 5);
-        simulatedAnnealingAlg(instance, 1000, 0.999, 0.01);
+        Results r_random = randomAlg(instance, 10000);
+        csv << "Random," << instance_name << "," << r_random.best << "," << r_random.worst << "," << r_random.avg << "," << r_random.std << endl;
+
+        int greedy_fitness = greedyAlg(instance);
+        csv << "Greedy," << instance_name << "," << greedy_fitness << "," << greedy_fitness << "," << greedy_fitness << ",0" << endl;
+
+        Results r_ea = evolvingAlg(instance, 100, 100, 0.5, 0.2, 5, convergence_csv, instance_name);
+        csv << "EA," << instance_name << "," << r_ea.best << "," << r_ea.worst << "," << r_ea.avg << "," << r_ea.std << endl;
+
+        Results r_sa = simulatedAnnealingAlg(instance, 1000, 0.999, 0.01);
+        csv << "SA," << instance_name << "," << r_sa.best << "," << r_sa.worst << "," << r_sa.avg << "," << r_sa.std << endl;
+
         cout << "------------------------------------------------------" << endl;
     }
+
+    csv.close();
+    convergence_csv.close();
+    cout << "Results saved to results.csv and convergence.csv" << endl;
 
     return 0;
 }
