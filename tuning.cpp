@@ -35,7 +35,21 @@ Results evolvingAlg(Instance& instance, int pop_size, int gen, float px, float p
         
         for (int i = 0; i < gen; i++) {
             vector<Individual> new_population;
-            for (int j = 0; j < pop_size; j++) {
+            
+            // Saving the best individual of the current generation (elitism)
+            Individual best_in_gen = pop.individuals[0];
+            for (int k = 1; k < pop_size; k++) {
+                if (pop.individuals[k].fitness < best_in_gen.fitness) {
+                    best_in_gen = pop.individuals[k];
+                }
+            }
+            new_population.push_back(best_in_gen);
+            if (best_in_gen.fitness < best_run.fitness) {
+                best_run = best_in_gen;
+            }
+            
+            // Generating children (starting from j=1 because j=0 is the best individual we just saved)
+            for (int j = 1; j < pop_size; j++) {
                 Individual parent1 = pop.tournament(tournament_size);
                 Individual parent2 = pop.tournament(tournament_size);
                 Individual offspring = parent1;
@@ -59,8 +73,10 @@ Results evolvingAlg(Instance& instance, int pop_size, int gen, float px, float p
                 if (offspring.fitness < best_run.fitness) {
                     best_run = offspring;
                 }
+                
                 new_population.push_back(offspring);
             }
+            
             pop.individuals = new_population;
         }
         
@@ -69,7 +85,7 @@ Results evolvingAlg(Instance& instance, int pop_size, int gen, float px, float p
         avg += best_run.fitness;
         fitnesses.push_back(best_run.fitness);
     }
-    
+
     avg /= 10;
     for (int i = 0; i < (int)fitnesses.size(); i++) {
         std += (fitnesses[i] - avg) * (fitnesses[i] - avg);
@@ -80,7 +96,10 @@ Results evolvingAlg(Instance& instance, int pop_size, int gen, float px, float p
     return {best, worst, avg, std};
 }
 
-void tuningEA(Instance& instance, ofstream& csv) {
+void tuningEA(Instance& instance) {
+    ofstream csv("./results/tuning_ea.csv");
+    csv << "parameter,value,best,worst,avg,std" << endl;
+
     cout << "\n--- Tuning Population Size ---" << endl;
     vector<int> pop_sizes = {50, 100, 200};
     for (int pop_size : pop_sizes) {
@@ -121,19 +140,91 @@ void tuningEA(Instance& instance, ofstream& csv) {
     cout << "Reverse: ";
     Results r_rev = evolvingAlg(instance, 100, 100, 0.7, 0.1, 5, OX, REVERSE);
     csv << "mutation,Reverse," << r_rev.best << "," << r_rev.worst << "," << r_rev.avg << "," << r_rev.std << endl;
+    
+    csv.close();
+}
+
+Results simulatedAnnealingAlg(Instance& instance, float T0, float alpha, float T_min, int max_evals = 10000) {
+    random_device rd;
+    mt19937 g(rd());
+    uniform_real_distribution<float> dis(0.0, 1.0);
+    
+    int best = INT_MAX;
+    int worst = -1;
+    float avg = 0;
+    float std = 0;
+    vector<int> fitnesses;
+    
+    for (int run = 0; run < 10; run++) {
+        Individual current(instance.n_jobs, instance);
+        Individual best_run = current;
+        float T = T0;
+        int evals = 1;
+        
+        while (T > T_min && evals < max_evals) {
+            Individual neighbor = current;
+            neighbor.mutationSwap(instance);
+            evals++; 
+            
+            if (neighbor.fitness < current.fitness) {
+                current = neighbor;
+                if (current.fitness < best_run.fitness) {
+                    best_run = current;
+                }
+            } else {
+                float acceptance_prob = exp((current.fitness - neighbor.fitness) / T);
+                if (dis(g) < acceptance_prob) {
+                    current = neighbor;
+                }
+            }
+            T *= alpha;
+        }
+        
+        if (best_run.fitness < best) best = best_run.fitness;
+        if (best_run.fitness > worst) worst = best_run.fitness;
+        avg += best_run.fitness;
+        fitnesses.push_back(best_run.fitness);
+    }
+    
+    avg /= 10;
+    for (int i = 0; i < (int)fitnesses.size(); i++) {
+        std += (fitnesses[i] - avg) * (fitnesses[i] - avg);
+    }
+    std = sqrt(std / 10);
+    
+    cout << "SA Best: " << best << " Worst: " << worst << " Avg: " << avg << " Std: " << std << endl;
+    return {best, worst, avg, std};
+}
+
+void tuningSA(Instance& instance) {
+    ofstream csv("./results/tuning_sa.csv");
+    csv << "parameter,value,best,worst,avg,std" << endl;
+
+    cout << "\n--- Tuning SA: Initial Temperature (T0) ---" << endl;
+    vector<float> T0_values = {100.0, 1000.0, 10000.0};
+    for (float T0 : T0_values) {
+        cout << "T0=" << T0 << ": ";
+        Results r = simulatedAnnealingAlg(instance, T0, 0.999, 0.01, 10000);
+        csv << "T0," << T0 << "," << r.best << "," << r.worst << "," << r.avg << "," << r.std << endl;
+    }
+
+    cout << "\n--- Tuning SA: Cooling Rate (alpha) ---" << endl;
+    vector<float> alpha_values = {0.90, 0.95, 0.99, 0.999};
+    for (float alpha : alpha_values) {
+        cout << "alpha=" << alpha << ": ";
+        Results r = simulatedAnnealingAlg(instance, 1000.0, alpha, 0.01, 10000);
+        csv << "alpha," << alpha << "," << r.best << "," << r.worst << "," << r.avg << "," << r.std << endl;
+    }
+    
+    csv.close();
 }
 
 int main() {
     Instance instance;
     instance.loadFile("./instances/tai20_5_0.fsp");
 
-    ofstream csv("./results/tuning_results.csv");
-    csv << "parameter,value,best,worst,avg,std" << endl;
-
-    tuningEA(instance, csv);
-
-    csv.close();
-    cout << "\nTuning results saved to tuning_results.csv" << endl;
+    tuningEA(instance);
+    tuningSA(instance);
 
     return 0;
 }

@@ -69,7 +69,21 @@ Results evolvingAlg(Instance& instance, int pop_size, int gen, float px, float p
         
         for (int i = 0; i < gen; i++) {
             vector<Individual> new_population;
-            for (int j = 0; j < pop_size; j++) {
+            
+            // Saving the best individual of the current generation (elitism)
+            Individual best_in_gen = pop.individuals[0];
+            for (int k = 1; k < pop_size; k++) {
+                if (pop.individuals[k].fitness < best_in_gen.fitness) {
+                    best_in_gen = pop.individuals[k];
+                }
+            }
+            new_population.push_back(best_in_gen);
+            if (best_in_gen.fitness < best_run.fitness) {
+                best_run = best_in_gen;
+            }
+            
+            // Generating children (starting from j=1 because j=0 is the best individual we just saved)
+            for (int j = 1; j < pop_size; j++) {
                 Individual parent1 = pop.tournament(tournament_size);
                 Individual parent2 = pop.tournament(tournament_size);
                 Individual offspring = parent1;
@@ -93,8 +107,10 @@ Results evolvingAlg(Instance& instance, int pop_size, int gen, float px, float p
                 if (offspring.fitness < best_run.fitness) {
                     best_run = offspring;
                 }
+                
                 new_population.push_back(offspring);
             }
+            
             pop.individuals = new_population;
             
             convergence_csv << run << "," << i << "," << best_run.fitness << ",EA," << instance_name << endl;
@@ -105,7 +121,7 @@ Results evolvingAlg(Instance& instance, int pop_size, int gen, float px, float p
         avg += best_run.fitness;
         fitnesses.push_back(best_run.fitness);
     }
-    
+
     avg /= 10;
     for (int i = 0; i < (int)fitnesses.size(); i++) {
         std += (fitnesses[i] - avg) * (fitnesses[i] - avg);
@@ -193,7 +209,7 @@ int main() {
         int greedy_fitness = greedyAlg(instance);
         csv << "Greedy," << instance_name << "," << greedy_fitness << "," << greedy_fitness << "," << greedy_fitness << ",0" << endl;
 
-        Results r_ea = evolvingAlg(instance, 100, 100, 0.5, 0.2, 5, convergence_csv, instance_name);
+        Results r_ea = evolvingAlg(instance, 100, 100, 0.7, 0.2, 5, convergence_csv, instance_name);
         csv << "EA," << instance_name << "," << r_ea.best << "," << r_ea.worst << "," << r_ea.avg << "," << r_ea.std << endl;
 
         Results r_sa = simulatedAnnealingAlg(instance, 1000, 0.999, 0.01);
@@ -204,7 +220,5 @@ int main() {
 
     csv.close();
     convergence_csv.close();
-    cout << "Results saved to results.csv and convergence.csv" << endl;
-
     return 0;
 }
