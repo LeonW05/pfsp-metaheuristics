@@ -132,7 +132,7 @@ Results evolvingAlg(Instance& instance, int pop_size, int gen, float px, float p
     return {best, worst, avg, std};
 }
 
-Results simulatedAnnealingAlg(Instance& instance, float T0, float alpha, float T_min) {
+Results simulatedAnnealingAlg(Instance& instance, float T0, float alpha, float T_min, int max_evals = 10000) {
     random_device rd;
     mt19937 g(rd());
     uniform_real_distribution<float> dis(0.0, 1.0);
@@ -147,10 +147,13 @@ Results simulatedAnnealingAlg(Instance& instance, float T0, float alpha, float T
         Individual current(instance.n_jobs, instance);
         Individual best_run = current;
         float T = T0;
+        int evals = 1;
         
-        while (T > T_min) {
+        while (T > T_min && evals < max_evals) {
             Individual neighbor = current;
             neighbor.mutationSwap(instance);
+            evals++; 
+            
             if (neighbor.fitness < current.fitness) {
                 current = neighbor;
                 if (current.fitness < best_run.fitness) {
@@ -212,7 +215,7 @@ int main() {
         Results r_ea = evolvingAlg(instance, 100, 100, 0.7, 0.2, 5, convergence_csv, instance_name);
         csv << "EA," << instance_name << "," << r_ea.best << "," << r_ea.worst << "," << r_ea.avg << "," << r_ea.std << endl;
 
-        Results r_sa = simulatedAnnealingAlg(instance, 1000, 0.999, 0.01);
+        Results r_sa = simulatedAnnealingAlg(instance, 10000, 0.999, 0.01);
         csv << "SA," << instance_name << "," << r_sa.best << "," << r_sa.worst << "," << r_sa.avg << "," << r_sa.std << endl;
 
         cout << "------------------------------------------------------" << endl;
